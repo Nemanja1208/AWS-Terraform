@@ -8,8 +8,8 @@ terraform {
 }
 
 provider "aws" {
-    region = "eu-north-1"
-    shared_config_files      = ["/Users/neman/.aws/conf"]
-    shared_credentials_files = ["/Users/neman/.aws/credentials"]
-    profile                  = "nemoPrivateVSCode"
+  region                   = "eu-north-1"
+  shared_config_files      = ["/Users/neman/.aws/conf"]
+  shared_credentials_files = ["/Users/neman/.aws/credentials"]
+  profile                  = "nemoPrivateVSCode"
 }

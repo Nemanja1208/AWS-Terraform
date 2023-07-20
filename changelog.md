@@ -102,3 +102,41 @@
     - Now run `terraform apply` to add this resource
 
 11. Give our resources way to the internet by using Internet gateway `https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/internet_gateway`
+
+    - adding internet gateway resource with this code in main.tf
+
+      ```
+      resource "aws_internet_gateway" "nemo_internet_gateway" {
+          vpc_id = aws_vpc.nemo_vpc.id
+
+          tags = {
+              Name = "dev-internet-gateway"
+          }
+      }
+      ```
+
+    - running `terraform fmt`- will fix and format correctly
+
+    - Now let's deploy this Internet Gateway resource with `terraform apply`
+
+12. Now we create a A Route Table so we can direct traffic from our subnet to Internet Gateway `https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route_table`
+
+    - Add these resources to your main.tf
+
+      ```
+      resource "aws_route_table" "nemo_public_route_table" {
+          vpc_id = aws_vpc.nemo_vpc.id
+
+          tags = {
+              Name = "dev-public-route-table"
+          }
+      }
+
+      resource "aws_route" "default_route" {
+          route_table_id = aws_route_table.nemo_public_route_table.id
+          destination_cidr_block = "0.0.0.0/0"
+          gateway_id = aws_internet_gateway.nemo_internet_gateway.id
+      }
+      ```
+
+    - Now run `terraform apply` to add this resources
