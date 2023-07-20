@@ -15,7 +15,7 @@ resource "aws_subnet" "nemo_public_subnet" {
   availability_zone       = "eu-north-1a"
 
   tags = {
-    Name : "dev-public"
+    Name = "dev-public"
   }
 }
 
@@ -69,4 +69,29 @@ resource "aws_security_group" "nemo_security_group" {
 resource "aws_key_pair" "nemo_keypair_auth" {
   key_name   = "nemo-key"
   public_key = file("C:/Users/neman/.ssh/nemokey.pub")
+}
+
+resource "aws_instance" "nemo_dev_node" {
+  instance_type          = "t3.micro"
+  ami                    = data.aws_ami.server_ami.id
+  key_name               = aws_key_pair.nemo_keypair_auth.key_name
+  vpc_security_group_ids = [aws_security_group.nemo_security_group.id]
+  subnet_id              = aws_subnet.nemo_public_subnet.id
+  user_data              = file("userdata.tpl")
+
+  root_block_device {
+    volume_size = 10
+  }
+  tags = {
+    Name = "dev-node"
+  }
+
+  provisioner "local-exec" {
+    command = templatefile("windows-ssh-config.tpl", {
+        hostname = self.public_ip,
+        user = "ubuntu",
+        identityfile = "~/.ssh/nemokey"
+    })
+    interpreter = [ "Powershell", "-Command" ]
+  }
 }

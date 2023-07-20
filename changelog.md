@@ -216,3 +216,96 @@
     - Now lets apply this with `terraform apply`
 
 17. Now we are finally deploying our EC2 instance `https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/instance`
+
+    - Create a new resource for the ec2 instance
+
+      ```
+        resource "aws_instance" "nemo_dev_node" {
+            instance_type = "t3.micro"
+            ami = data.aws_ami.server_ami.id
+            key_name = aws_key_pair.nemo_keypair_auth.id
+            vpc_security_group_ids = [aws_security_group.nemo_security_group.id]
+            subnet_id = aws_subnet.nemo_subnet.id
+
+            root_block_device {
+            volume_size = 10
+            }
+
+            tags = {
+                Name = "dev-node"
+            }
+      }
+      ```
+
+    - Now before applying changes we need to wait for the next step and add some user data to this instance...
+
+18. We are going to utilize userData to bootstrap our instance and install docker engine. This will allow us to have EC2 instance deployed with Docker ready to go for out dev needs
+
+    - First we create a userdata.tpl file with following code in it :
+
+      ```
+          #!/bin/bash
+          sudo apt-get update -y &&
+          sudo apt-get install -y \
+          apt-transport-https \
+          ca-certificates \
+          curl \
+          gnupg-agent \
+          software-properties-common &&
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - &&
+          sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" &&
+          sudo apt-get update -y &&
+          sudo sudo apt-get install docker-ce docker-ce-cli containerd.io -y &&
+          sudo usermod -aG docker ubuntu
+      ```
+
+    - Now lets go to main.tf and add this userdata to our resource inside aws_instance `user_data = file("userdata.tpl")`...
+
+    - You can now run `terraform apply` and later check in the AWS Console in the EC2 Console that you have really launched a instance
+
+19. Now let's SSH into the instance
+
+    - First we need the IP adress either from EC2 Console or the terraform show state script
+
+    - Then we run `ssh -i ~/.ssh/nemokey ubuntu@13.49.74.26` - where the numbers are the IP Adress and change the path to your own ssh key and like that you are in the EC2 instance
+
+    - You can test this by running docker --version and see that you really are in there and that you actually have docker installed
+
+20. SSH Config Scripts - lets configure VSCode to connect to EC2 Instance
+
+    - Go to extensions and search for SSH (Remote - SSH by Microsoft) and install it
+
+    - We are going to use template files to create configuration scripts
+
+    - Create the file windows-ssh-config.tpl with following :
+      ```
+      add-content -path c:/users/neman/.ssh/config -value @'
+      Host ${hostname}
+          HostName ${hostname}
+          User ${user}
+          IdentityFile ${identityfile}
+      '@
+      ```
+
+21. Now we are going to utilize Provisioner to config VSCode to be able to ssh into the EC2 Instance `https://developer.hashicorp.com/terraform/language/resources/provisioners/syntax`
+
+    - Add this code inside the main.tf inside the ec2 instance at the very bottom
+
+      ```
+      provisioner "local-exec" {
+          command = templatefile("windows-ssh-config.tpl", {
+              hostname = self.public_ip,
+              user = "ubuntu",
+              identityfile = "~/.ssh/nemokey"
+          })
+          interpreter = [ "Powershell", "-Command" ]
+      }
+      ```
+
+    - This will create our instance and replace hostname, user and identityfile with our stuff
+
+22. Terraform Apply - replace
+
+    - Now we are going to redeploy EC2 instance with our privisioner and our config
+
+    - By running `terraform apply -replace aws_instance.nemo_dev_node` rename to your instance name inside main.tf it will show the changes and that you have 1 instance to destroy and 1 to create, and you will type "yes" when prompted
