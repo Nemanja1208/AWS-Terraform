@@ -309,3 +309,61 @@
     - Now we are going to redeploy EC2 instance with our privisioner and our config
 
     - By running `terraform apply -replace aws_instance.nemo_dev_node` rename to your instance name inside main.tf it will show the changes and that you have 1 instance to destroy and 1 to create, and you will type "yes" when prompted
+
+    - By running `cat ~/.ssh/config` you can see if the config with hostname, user and identityfile is created
+
+23. Now, time for the truth, can we remote ssh with VSCode
+
+    - Go to View > Command palette and write SSH and go to `Remote-SSH: Connect to Host...`
+
+    - Choose the IP and it should open up a new VSCode that will prompt you to choose platform, and you should choose Linux and Continue, open up a terminal and you should see ubuntu@ip_adress. Congratulations !
+
+    - You can even choose to open a folder and open the /home/ubuntu and you are on a fully remote terminal with all the files at hand...
+
+24. Now we will start optimizing our scripts with variables in Terraform... `https://developer.hashicorp.com/terraform/language/values/variables`
+
+    - We will start by changing the name of the OS in the provisioner to a variable instead so "windows" -> ${var.host_os}
+
+    - Next we create variables.tf file where we keep our variables, so add this to it
+
+      ```
+      variable "host_os" {
+          type = string
+      }
+      ```
+
+    - Next we do something crazy and that is that we destroy our infrascture with `terraform destroy` and you will see that it is asks us to declare a variable, so we will find a way to declare it other way but for now we can declare dynamically
+
+    - If we now run `terraform plan` it will asks us again to declare the variable
+
+25. Variable Precedence
+
+    - You can use `terraform console` to check the value of a variable but it says knows after apply
+
+    - Now we add default value to the host_os variable `default = "windows"`
+    - Now if we run console it says windows
+
+    - Now we create a new file named `terraform.tfvars` and give the value of host_os of `linux`. If you run the console now you will see that the `.tfvars` takes presedence over the default value in `variables.tf` file
+    - If you want to override everything that you did with a declaration and value of the variable you can do it inline with a command for example `terraform console -var="host_os=unix"` and you will now get `unix` as you host_os everywhere
+
+26. Conditionals, we are going to change the interpeter inside the ec2 instance inside main.tf `https://developer.hashicorp.com/terraform/language/expressions/conditionals`
+
+    - simple commande inline just `interpreter = var.host_os == "windows" ? ["Powershell", "-Command"] : ["bash", "-c"]`
+
+    - Now we are going to run `terraform apply` again, do deploy and see if we can SSH into it through VSCode...
+
+    - You can checkout the EC2 instance IP adress and connect to it through VSCode, it should work same as the last time...
+
+27. Outputs `https://developer.hashicorp.com/terraform/language/values/outputs`
+
+    - Create `outputs.tf` file and add
+
+      ```
+      output "dev_ip" {
+          value = aws_instance.nemo_dev_node.public_ip
+      }
+      ```
+
+    - now run `terraform apply -refresh-only` and that will just add output and you can later just run `terraform output` and see the value
+
+### All finished, now you can get creative !
