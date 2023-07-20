@@ -36,7 +36,37 @@ resource "aws_route_table" "nemo_public_route_table" {
 }
 
 resource "aws_route" "default_route" {
-  route_table_id = aws_route_table.nemo_public_route_table.id
+  route_table_id         = aws_route_table.nemo_public_route_table.id
   destination_cidr_block = "0.0.0.0/0"
-  gateway_id = aws_internet_gateway.nemo_internet_gateway.id
+  gateway_id             = aws_internet_gateway.nemo_internet_gateway.id
+}
+
+resource "aws_route_table_association" "nemo_public_association" {
+  subnet_id      = aws_subnet.nemo_public_subnet.id
+  route_table_id = aws_route_table.nemo_public_route_table.id
+}
+
+resource "aws_security_group" "nemo_security_group" {
+  name        = "dev_securitygroup"
+  description = "dev security group"
+  vpc_id      = aws_vpc.nemo_vpc.id
+
+  ingress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_key_pair" "nemo_keypair_auth" {
+  key_name   = "nemo-key"
+  public_key = file("C:/Users/neman/.ssh/nemokey.pub")
 }

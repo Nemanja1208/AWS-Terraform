@@ -140,3 +140,79 @@
       ```
 
     - Now run `terraform apply` to add this resources
+
+13. Now we create Route Table Association to bridge the gap between route table and subnet `https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route_table_association`
+
+    - Register a new resource that is Route Table Association by adding this code in the main.tf
+
+      ```
+      resource "aws_route_table_association" "nemo_public_association" {
+      subnet_id      = aws_subnet.nemo_public_subnet.id
+      route_table_id = aws_route_table.nemo_public_route_table.id
+      }
+      ```
+
+    - Now we run `terraform apply` to add this resource
+    - To checkout all the resource you can always do that in the AWS Console as well when you visit the VPC Console
+
+14. Now we are adding an importent resource to our deployment and that is Security Groups `https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group`
+
+    - Adding the resource in the main.tf with the following code :
+
+      ```
+      resource "aws_security_group" "nemo_security_group" {
+          name        = "dev_securitygroup"
+          description = "dev security group"
+          vpc_id      = aws_vpc.nemo_vpc.id
+
+          ingress {
+              from_port   = 0
+              to_port     = 0
+              protocol    = "-1"
+              cidr_blocks = ["0.0.0.0/0"]
+          }
+
+          egress {
+              from_port   = 0
+              to_port     = 0
+              protocol    = "-1"
+              cidr_blocks = ["0.0.0.0/0"]
+          }
+      }
+      ```
+
+    - Now run `terraform apply` to add this resource
+
+15. Before we deploy we need to register a AMI data resource from which we want to deploy `https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ami`
+
+    - Go to EC2 in AWS Console and while "fake" launching a EC2 instance with ubuntu with server 18.04 just copy the AMI ID, that will look something like `ami-074251216af698218` then cancel and go back to EC2 Console and click on IAM under Images and enter that AMI ID and copy the owner ID that is shown. Would be something like `099720109477`.
+
+    - Now we create a new file that we name `datasources.tf` in the root folder and add the following :
+
+      ```
+      data "aws_ami" "server_ami" {
+          most_recent = true
+          owners = ["099720109477"]
+          filter {
+            name = "name"
+            values = ["ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-*"]
+          }
+      }
+      ```
+
+    - Now lets apply this with `terraform apply`
+
+16. Now we create a Key Pair so that we can use that to ssh into a EC2 instance later `https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/key_pair`
+
+    - run this in order to create a key pair `ssh-keygen -t ed25519` and remember where it saves it... Should be C:/Users/[Name]/.ssh
+
+    - now add this code to main.tf but ofc with your paths and names
+      ```
+      resource "aws_key_pair" "nemo_keypair_auth" {
+          key_name = "nemo-key"
+          public_key = file("C:/Users/neman/.ssh/nemokey.pub")
+      }
+      ```
+    - Now lets apply this with `terraform apply`
+
+17. Now we are finally deploying our EC2 instance `https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/instance`
